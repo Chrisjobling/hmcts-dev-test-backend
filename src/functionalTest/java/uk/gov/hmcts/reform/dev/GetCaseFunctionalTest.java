@@ -78,6 +78,8 @@ class GetCaseFunctionalTest {
 
     @Test
     void retrievesAllPersistedTasks() {
+        int initialCount = given().port(port).when().get("/cases")
+            .then().statusCode(200).extract().jsonPath().getInt("totalElements");
         List<Long> createdIds = new ArrayList<>();
         List<Map<String, Object>> createdTasks = new ArrayList<>();
         List<String> requests = List.of(
@@ -123,10 +125,24 @@ class GetCaseFunctionalTest {
                 .then()
                 .statusCode(200)
                 .contentType(ContentType.JSON)
-                .extract().jsonPath().getList("");
+                .extract().jsonPath().getList("content");
 
             assertTrue(tasks.containsAll(createdTasks),
                        "The response should contain both created tasks with all their saved fields");
+
+            for (int index = 0; index < createdTasks.size(); index++) {
+                Response page = given().port(port).queryParam("page", initialCount + index).queryParam("size", 1)
+                    .when().get("/cases").then().statusCode(200)
+                    .body("page", equalTo(initialCount + index))
+                    .body("size", equalTo(1))
+                    .body("totalElements", equalTo(initialCount + createdTasks.size()))
+                    .body("totalPages", equalTo(initialCount + createdTasks.size()))
+                    .extract().response();
+                assertEquals(List.of(createdTasks.get(index)), page.jsonPath().getList("content"));
+            }
+
+            given().port(port).queryParam("page", initialCount + createdTasks.size()).queryParam("size", 1)
+                .when().get("/cases").then().statusCode(200).body("content.size()", equalTo(0));
         } finally {
             caseRepository.deleteAllById(createdIds);
         }
@@ -201,9 +217,9 @@ class GetCaseFunctionalTest {
             for (int index = 0; index < filters.size(); index++) {
                 Response response = given().port(port).queryParam("status", filters.get(index))
                     .when().get("/cases").then().statusCode(200).extract().response();
-                List<Long> returnedIds = response.jsonPath().getList("id", Long.class);
+                List<Long> returnedIds = response.jsonPath().getList("content.id", Long.class);
                 assertTrue(returnedIds.contains(ids.get(index)));
-                List<String> statuses = response.jsonPath().getList("status", String.class);
+                List<String> statuses = response.jsonPath().getList("content.status", String.class);
                 String filter = filters.get(index);
                 assertTrue(statuses.stream().allMatch(filter::equalsIgnoreCase));
             }
@@ -232,9 +248,9 @@ class GetCaseFunctionalTest {
             .body("paths.'/cases'.get.parameters.find { it.name == 'status' }.schema.enum",
                   hasItems("open", "closed", "in-progress"))
             .body("paths.'/cases'.get.responses.'200'.description", equalTo("Tasks retrieved successfully"))
-            .body("paths.'/cases'.get.responses.'200'.content.'application/json'.schema.type", equalTo("array"))
-            .body("paths.'/cases'.get.responses.'200'.content.'application/json'.schema.items.'$ref'",
-                  equalTo("#/components/schemas/CaseTask"));
+            .body("paths.'/cases'.get.responses.'200'.content.'application/json'.schema.'$ref'",
+                  equalTo("#/components/schemas/CasePage"))
+            .body("components.schemas.CasePage.properties.content.type", equalTo("array"));
     }
 
     @Test

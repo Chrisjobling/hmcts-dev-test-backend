@@ -19,11 +19,6 @@ wish.
 The Gradle wrapper is included, so a separate Gradle installation is not required.
 On Windows, use `gradlew.bat` instead of `./gradlew`.
 
-## API documentation
-
-With the backend running, open [Swagger UI](http://localhost:4000/swagger-ui/index.html)
-to explore and try the API endpoints.
-
 ## Local PostgreSQL
 
 Start the database before running the backend:
@@ -32,6 +27,10 @@ Start the database before running the backend:
 docker compose up -d --wait
 ./gradlew bootRun
 ```
+## API documentation
+
+With the backend running, open [Swagger UI](http://localhost:4000/swagger-ui/index.html)
+to explore and try the API endpoints.
 
 PostgreSQL is exposed on localhost port 5432 with database/user `hmcts` and password
 `local-development-only`. These defaults are for local development only. Override `DB_PORT`,

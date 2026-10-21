@@ -2,12 +2,15 @@ package uk.gov.hmcts.reform.dev.controllers;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,13 +23,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import uk.gov.hmcts.reform.dev.models.CaseTask;
+import uk.gov.hmcts.reform.dev.models.CasePage;
 import uk.gov.hmcts.reform.dev.models.CreateCaseRequest;
 import uk.gov.hmcts.reform.dev.models.ExampleCase;
 import uk.gov.hmcts.reform.dev.models.UpdateStatusRequest;
 import uk.gov.hmcts.reform.dev.repositories.CaseRepository;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 import static org.springframework.http.ResponseEntity.ok;
 
@@ -56,19 +59,27 @@ public class CaseController {
     }
 
     @Operation(summary = "Retrieve all tasks")
-    @ApiResponse(responseCode = "400", description = "Unsupported status filter", content = @Content)
+    @ApiResponse(responseCode = "400", description = "Invalid status filter or pagination parameters",
+                 content = @Content)
     @ApiResponse(responseCode = "200", description = "Tasks retrieved successfully",
                  content = @Content(mediaType = "application/json",
-                     array = @ArraySchema(schema = @Schema(implementation = CaseTask.class))))
+                     schema = @Schema(implementation = CasePage.class)))
     @GetMapping(value = "/cases", produces = "application/json")
-    public ResponseEntity<List<CaseTask>> getAllCases(
+    public ResponseEntity<CasePage> getAllCases(
         @Parameter(description = "Optional status filter (case-insensitive)",
                    schema = @Schema(allowableValues = {"open", "in-progress", "closed"}))
         @RequestParam(name = "status", required = false)
         @Pattern(regexp = "open|in-progress|closed", flags = Pattern.Flag.CASE_INSENSITIVE)
-        String status
+        String status,
+        @Parameter(description = "Zero-based page number")
+        @RequestParam(name = "page", defaultValue = "0") @Min(0) int page,
+        @Parameter(description = "Cases per page, from 1 to 50")
+        @RequestParam(name = "size", defaultValue = "10") @Min(1) @Max(50) int size
     ) {
-        return ok(status == null ? caseRepository.findAll() : caseRepository.findByStatusIgnoreCase(status));
+        PageRequest pageable = PageRequest.of(page, size, Sort.by("id").ascending());
+        return ok(CasePage.from(status == null
+                                   ? caseRepository.findAll(pageable)
+                                   : caseRepository.findByStatusIgnoreCase(status, pageable)));
     }
 
     @Operation(summary = "Update a task's status")
