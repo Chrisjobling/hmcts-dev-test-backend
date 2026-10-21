@@ -37,6 +37,7 @@ class GetCaseTest {
     void retrievesExistingCase(String description) throws Exception {
         String optionalDescription = description.isEmpty() ? null : description;
         CaseTask task = new CaseTask(new CreateCaseRequest(
+            "ABC12345",
             "Review evidence", optionalDescription, "Accepted", LocalDateTime.of(2026, 11, 1, 10, 30)
         ));
         ReflectionTestUtils.setField(task, "id", 42L);
@@ -45,6 +46,7 @@ class GetCaseTest {
         mockMvc.perform(get("/cases/42"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(42))
+            .andExpect(jsonPath("$.caseNumber").value("ABC12345"))
             .andExpect(jsonPath("$.title").value("Review evidence"))
             .andExpect(jsonPath("$.description").value(optionalDescription))
             .andExpect(jsonPath("$.status").value("Accepted"))

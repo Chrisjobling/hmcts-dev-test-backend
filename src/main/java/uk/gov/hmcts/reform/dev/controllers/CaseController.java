@@ -1,6 +1,7 @@
 package uk.gov.hmcts.reform.dev.controllers;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -18,6 +19,7 @@ import uk.gov.hmcts.reform.dev.models.ExampleCase;
 import uk.gov.hmcts.reform.dev.repositories.CaseRepository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.springframework.http.ResponseEntity.ok;
 
@@ -44,6 +46,15 @@ public class CaseController {
     @GetMapping(value = "/cases/{id}", produces = "application/json")
     public ResponseEntity<CaseTask> getCaseById(@PathVariable("id") Long id) {
         return ResponseEntity.of(caseRepository.findById(id));
+    }
+
+    @Operation(summary = "Retrieve all tasks")
+    @ApiResponse(responseCode = "200", description = "Tasks retrieved successfully",
+                 content = @Content(mediaType = "application/json",
+                     array = @ArraySchema(schema = @Schema(implementation = CaseTask.class))))
+    @GetMapping(value = "/cases", produces = "application/json")
+    public ResponseEntity<List<CaseTask>> getAllCases() {
+        return ok(caseRepository.findAll());
     }
 
     @GetMapping(value = "/get-example-case", produces = "application/json")

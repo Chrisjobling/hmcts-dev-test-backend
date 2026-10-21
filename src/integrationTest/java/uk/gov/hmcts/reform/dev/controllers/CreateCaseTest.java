@@ -37,6 +37,7 @@ class CreateCaseTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                 {
+                                  "caseNumber": "ABC12345",
                                   "title": "Review evidence",
                                   "description": "Read the witness statement",
                                   "status": "Accepted",
@@ -44,9 +45,11 @@ class CreateCaseTest {
                                 }
                                 """))
             .andExpect(status().isCreated())
+            .andExpect(jsonPath("$.caseNumber").value("ABC12345"))
             .andExpect(jsonPath("$.title").value("Review evidence"))
             .andExpect(jsonPath("$.description").value("Read the witness statement"))
             .andExpect(jsonPath("$.status").value("Accepted"))
+            .andExpect(jsonPath("$.createdDate").isString())
             .andExpect(jsonPath("$.dueDateTime").value("2026-11-01T10:30:00"));
 
         verify(caseRepository).save(any(CaseTask.class));
@@ -59,7 +62,8 @@ class CreateCaseTest {
         mockMvc.perform(post("/cases")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
-                                {"title":"Review evidence","status":"Accepted","dueDateTime":"2026-11-01T10:30:00"}
+                                {"caseNumber":"00012345","title":"Review evidence",
+                                 "status":"Accepted","dueDateTime":"2026-11-01T10:30:00"}
                                 """))
             .andExpect(status().isCreated())
             .andExpect(jsonPath("$.title").value("Review evidence"))
@@ -71,15 +75,34 @@ class CreateCaseTest {
     @ParameterizedTest
     @ValueSource(strings = {
         "{}",
-        "{\"title\":\" \",\"status\":\"Accepted\",\"dueDateTime\":\"2026-11-01T10:30:00\"}",
-        "{\"title\":\"Review evidence\",\"status\":\" \",\"dueDateTime\":\"2026-11-01T10:30:00\"}",
-        "{\"title\":\"Review evidence\",\"status\":\"Accepted\"}",
-        "{\"title\":\"Review evidence\",\"status\":\"Accepted\",\"dueDateTime\":\"not-a-date\"}"
+        "{\"caseNumber\":\"1\",\"title\":\" \",\"status\":\"Accepted\",\"dueDateTime\":\"2026-11-01T10:30:00\"}",
+        "{\"caseNumber\":\"1\",\"title\":\"Review evidence\",\"status\":\" \",\"dueDateTime\":\"2026-11-01T10:30:00\"}",
+        "{\"caseNumber\":\"1\",\"title\":\"Review evidence\",\"status\":\"Accepted\"}",
+        "{\"caseNumber\":\"1\",\"title\":\"Review evidence\",\"status\":\"Accepted\",\"dueDateTime\":\"not-a-date\"}"
     })
     void rejectsInvalidRequests(String body) throws Exception {
         mockMvc.perform(post("/cases").contentType(MediaType.APPLICATION_JSON).content(body))
             .andExpect(status().isBadRequest());
 
+        verifyNoInteractions(caseRepository);
+    }
+
+    @Test
+    void rejectsMissingCaseNumber() throws Exception {
+        mockMvc.perform(post("/cases").contentType(MediaType.APPLICATION_JSON).content("""
+            {"title":"Review evidence","status":"Accepted","dueDateTime":"2026-11-01T10:30:00"}
+            """))
+            .andExpect(status().isBadRequest());
+        verifyNoInteractions(caseRepository);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"null", "\"\"", "\" \"", "12345", "1.5", "true", "[]", "{}"})
+    void rejectsInvalidCaseNumber(String caseNumber) throws Exception {
+        mockMvc.perform(post("/cases").contentType(MediaType.APPLICATION_JSON).content("""
+            {"caseNumber":%s,"title":"Review evidence","status":"Accepted","dueDateTime":"2026-11-01T10:30:00"}
+            """.formatted(caseNumber)))
+            .andExpect(status().isBadRequest());
         verifyNoInteractions(caseRepository);
     }
 

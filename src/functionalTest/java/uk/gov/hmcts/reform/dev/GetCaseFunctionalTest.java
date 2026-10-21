@@ -8,7 +8,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import uk.gov.hmcts.reform.dev.repositories.CaseRepository;
 
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import static io.restassured.RestAssured.given;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 
@@ -28,6 +35,7 @@ class GetCaseFunctionalTest {
             .contentType(ContentType.JSON)
             .body("""
                 {
+                  "caseNumber": "ABC12345",
                   "title": "Review evidence",
                   "description": "Read the witness statement",
                   "status": "Accepted",
@@ -42,6 +50,7 @@ class GetCaseFunctionalTest {
         long id = created.jsonPath().getLong("id");
 
         try {
+            assertNotNull(Instant.parse(created.jsonPath().getString("createdDate")));
             given()
                 .port(port)
                 .when()
@@ -51,14 +60,87 @@ class GetCaseFunctionalTest {
                 .contentType(ContentType.JSON)
                 .body("id", equalTo(created.jsonPath().get("id")))
                 .body("title", equalTo("Review evidence"))
+                .body("caseNumber", equalTo("ABC12345"))
                 .body("description", equalTo("Read the witness statement"))
                 .body("status", equalTo("Accepted"))
+                .body("createdDate", equalTo(created.jsonPath().getString("createdDate")))
                 .body("dueDateTime", equalTo("2026-11-01T10:30:00"));
         } finally {
             caseRepository.deleteById(id);
         }
 
         given().port(port).when().get("/cases/{id}", id).then().statusCode(404);
+    }
+
+    @Test
+    void retrievesAllPersistedTasks() {
+        List<Long> createdIds = new ArrayList<>();
+        List<Map<String, Object>> createdTasks = new ArrayList<>();
+        List<String> requests = List.of(
+            """
+                {
+                  "caseNumber": "ABC12345",
+                  "title": "Review evidence",
+                  "description": "Read the witness statement",
+                  "status": "Accepted",
+                  "dueDateTime": "2026-11-01T10:30:00"
+                }
+                """,
+            """
+                {
+                  "caseNumber": "00054321",
+                  "title": "Schedule hearing",
+                  "status": "Pending",
+                  "dueDateTime": "2026-11-02T14:00:00"
+                }
+                """
+        );
+
+        try {
+            for (String request : requests) {
+                Response created = given()
+                    .port(port)
+                    .contentType(ContentType.JSON)
+                    .body(request)
+                    .when()
+                    .post("/cases")
+                    .then()
+                    .statusCode(201)
+                    .extract().response();
+
+                createdIds.add(created.jsonPath().getLong("id"));
+                createdTasks.add(created.jsonPath().getMap(""));
+            }
+
+            List<Map<String, Object>> tasks = given()
+                .port(port)
+                .when()
+                .get("/cases")
+                .then()
+                .statusCode(200)
+                .contentType(ContentType.JSON)
+                .extract().jsonPath().getList("");
+
+            assertTrue(tasks.containsAll(createdTasks),
+                       "The response should contain both created tasks with all their saved fields");
+        } finally {
+            caseRepository.deleteAllById(createdIds);
+        }
+    }
+
+    @Test
+    void documentsRetrieveAllEndpoint() {
+        given()
+            .port(port)
+            .when()
+            .get("/v3/api-docs")
+            .then()
+            .statusCode(200)
+            .body("paths.'/cases'.get.summary", equalTo("Retrieve all tasks"))
+            .body("paths.'/cases'.get.responses.'200'.description", equalTo("Tasks retrieved successfully"))
+            .body("paths.'/cases'.get.responses.'200'.content.'application/json'.schema.type", equalTo("array"))
+            .body("paths.'/cases'.get.responses.'200'.content.'application/json'.schema.items.'$ref'",
+                  equalTo("#/components/schemas/CaseTask"));
     }
 
     @Test
