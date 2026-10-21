@@ -3,6 +3,8 @@ package uk.gov.hmcts.reform.dev;
 import io.restassured.http.ContentType;
 import io.restassured.response.Response;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.hasItems;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class GetCaseFunctionalTest {
@@ -181,6 +184,42 @@ class GetCaseFunctionalTest {
     }
 
     @Test
+    void filtersPersistedTasksByStatus() {
+        List<Long> ids = new ArrayList<>();
+        try {
+            for (String taskStatus : List.of("Open", "Closed", "In-Progress")) {
+                Response created = given().port(port).contentType(ContentType.JSON)
+                    .body("""
+                        {"caseNumber":"FILTER123","title":"Filter test","status":"%s",
+                         "dueDateTime":"2026-11-01T10:30:00"}
+                        """.formatted(taskStatus))
+                    .when().post("/cases").then().statusCode(201).extract().response();
+                ids.add(created.jsonPath().getLong("id"));
+            }
+
+            List<String> filters = List.of("open", "closed", "in-progress");
+            for (int index = 0; index < filters.size(); index++) {
+                Response response = given().port(port).queryParam("status", filters.get(index))
+                    .when().get("/cases").then().statusCode(200).extract().response();
+                List<Long> returnedIds = response.jsonPath().getList("id", Long.class);
+                assertTrue(returnedIds.contains(ids.get(index)));
+                List<String> statuses = response.jsonPath().getList("status", String.class);
+                String filter = filters.get(index);
+                assertTrue(statuses.stream().allMatch(filter::equalsIgnoreCase));
+            }
+        } finally {
+            caseRepository.deleteAllById(ids);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "pending", "in progress", "inprogress"})
+    void rejectsUnsupportedStatusFilters(String filter) {
+        given().port(port).queryParam("status", filter)
+            .when().get("/cases").then().statusCode(400);
+    }
+
+    @Test
     void documentsRetrieveAllEndpoint() {
         given()
             .port(port)
@@ -189,6 +228,9 @@ class GetCaseFunctionalTest {
             .then()
             .statusCode(200)
             .body("paths.'/cases'.get.summary", equalTo("Retrieve all tasks"))
+            .body("paths.'/cases'.get.parameters.find { it.name == 'status' }.required", equalTo(false))
+            .body("paths.'/cases'.get.parameters.find { it.name == 'status' }.schema.enum",
+                  hasItems("open", "closed", "in-progress"))
             .body("paths.'/cases'.get.responses.'200'.description", equalTo("Tasks retrieved successfully"))
             .body("paths.'/cases'.get.responses.'200'.content.'application/json'.schema.type", equalTo("array"))
             .body("paths.'/cases'.get.responses.'200'.content.'application/json'.schema.items.'$ref'",
