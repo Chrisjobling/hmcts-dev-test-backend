@@ -37,6 +37,27 @@ class CaseTaskTest {
     }
 
     @Test
+    void updatingStatusRepeatedlyPreservesOtherFields() {
+        CreateCaseRequest request = new CreateCaseRequest(
+            "ABC12345", "Review evidence", "Read statement", "Accepted",
+            LocalDateTime.of(2026, 11, 1, 10, 30)
+        );
+        CaseTask task = new CaseTask(request);
+        final Instant createdDate = task.getCreatedDate();
+
+        task.updateStatus("Completed");
+        assertEquals("Completed", task.getStatus());
+        task.updateStatus("Completed");
+
+        assertEquals("Completed", task.getStatus());
+        assertEquals(createdDate, task.getCreatedDate());
+        assertEquals(request.caseNumber(), task.getCaseNumber());
+        assertEquals(request.title(), task.getTitle());
+        assertEquals(request.description(), task.getDescription());
+        assertEquals(request.dueDateTime(), task.getDueDateTime());
+    }
+
+    @Test
     void allowsMissingDescription() {
         CreateCaseRequest request = new CreateCaseRequest(
             "ABC12345",

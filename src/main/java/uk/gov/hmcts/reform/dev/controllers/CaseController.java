@@ -8,7 +8,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,6 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import uk.gov.hmcts.reform.dev.models.CaseTask;
 import uk.gov.hmcts.reform.dev.models.CreateCaseRequest;
 import uk.gov.hmcts.reform.dev.models.ExampleCase;
+import uk.gov.hmcts.reform.dev.models.UpdateStatusRequest;
 import uk.gov.hmcts.reform.dev.repositories.CaseRepository;
 
 import java.time.LocalDateTime;
@@ -55,6 +59,34 @@ public class CaseController {
     @GetMapping(value = "/cases", produces = "application/json")
     public ResponseEntity<List<CaseTask>> getAllCases() {
         return ok(caseRepository.findAll());
+    }
+
+    @Operation(summary = "Update a task's status")
+    @ApiResponse(responseCode = "200", description = "Status updated",
+                 content = @Content(mediaType = "application/json", schema = @Schema(implementation = CaseTask.class)))
+    @ApiResponse(responseCode = "400", description = "Invalid ID or status", content = @Content)
+    @ApiResponse(responseCode = "404", description = "Task not found", content = @Content)
+    @PatchMapping(value = "/cases/{id}/status", consumes = "application/json", produces = "application/json")
+    @Transactional
+    public ResponseEntity<CaseTask> updateStatus(@PathVariable("id") Long id,
+                                                @Valid @RequestBody UpdateStatusRequest request) {
+        return ResponseEntity.of(caseRepository.findById(id).map(task -> {
+            task.updateStatus(request.status());
+            return caseRepository.save(task);
+        }));
+    }
+
+    @Operation(summary = "Delete a task")
+    @ApiResponse(responseCode = "204", description = "Task deleted", content = @Content)
+    @ApiResponse(responseCode = "400", description = "ID must be a valid 64-bit integer", content = @Content)
+    @ApiResponse(responseCode = "404", description = "Task not found", content = @Content)
+    @DeleteMapping("/cases/{id}")
+    @Transactional
+    public ResponseEntity<Void> deleteCase(@PathVariable("id") Long id) {
+        return caseRepository.findById(id).map(task -> {
+            caseRepository.delete(task);
+            return ResponseEntity.noContent().<Void>build();
+        }).orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping(value = "/get-example-case", produces = "application/json")

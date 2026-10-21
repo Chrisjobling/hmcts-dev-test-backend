@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Map;
 
 import static io.restassured.RestAssured.given;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.Matchers.equalTo;
@@ -126,6 +127,57 @@ class GetCaseFunctionalTest {
         } finally {
             caseRepository.deleteAllById(createdIds);
         }
+    }
+
+    @Test
+    void updatesStatusAndDeletesPersistedTask() {
+        Response created = given().port(port).contentType(ContentType.JSON)
+            .body("""
+                {"caseNumber":"MODIFY123","title":"Review evidence","description":"Read statement",
+                 "status":"Accepted","dueDateTime":"2026-11-01T10:30:00"}
+                """)
+            .when().post("/cases").then().statusCode(201).extract().response();
+        long id = created.jsonPath().getLong("id");
+
+        try {
+            Map<String, Object> expected = created.jsonPath().getMap("");
+            expected.put("status", "Completed");
+
+            Response updated = given().port(port).contentType(ContentType.JSON)
+                .body("{\"status\":\"Completed\"}")
+                .when().patch("/cases/{id}/status", id)
+                .then().statusCode(200).extract().response();
+            assertEquals(expected, updated.jsonPath().getMap(""));
+
+            Response repeatedUpdate = given().port(port).contentType(ContentType.JSON)
+                .body("{\"status\":\"Completed\"}")
+                .when().patch("/cases/{id}/status", id)
+                .then().statusCode(200).extract().response();
+            assertEquals(expected, repeatedUpdate.jsonPath().getMap(""));
+
+            Response retrieved = given().port(port).when().get("/cases/{id}", id)
+                .then().statusCode(200).extract().response();
+            assertEquals(expected, retrieved.jsonPath().getMap(""));
+
+            given().port(port).when().delete("/cases/{id}", id).then().statusCode(204).body(equalTo(""));
+            given().port(port).when().get("/cases/{id}", id).then().statusCode(404);
+            given().port(port).when().delete("/cases/{id}", id).then().statusCode(404);
+            given().port(port).contentType(ContentType.JSON).body("{\"status\":\"Accepted\"}")
+                .when().patch("/cases/{id}/status", id).then().statusCode(404);
+        } finally {
+            caseRepository.deleteById(id);
+        }
+    }
+
+    @Test
+    void documentsModificationEndpoints() {
+        given().port(port).when().get("/v3/api-docs").then().statusCode(200)
+            .body("paths.'/cases/{id}/status'.patch.responses.'200'.description", equalTo("Status updated"))
+            .body("paths.'/cases/{id}/status'.patch.responses.'400'", notNullValue())
+            .body("paths.'/cases/{id}/status'.patch.responses.'404'", notNullValue())
+            .body("paths.'/cases/{id}'.delete.responses.'204'.description", equalTo("Task deleted"))
+            .body("paths.'/cases/{id}'.delete.responses.'400'", notNullValue())
+            .body("paths.'/cases/{id}'.delete.responses.'404'", notNullValue());
     }
 
     @Test

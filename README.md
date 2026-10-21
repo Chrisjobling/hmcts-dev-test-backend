@@ -41,10 +41,3 @@ when running the backend, also export the same variables in its environment (or 
 
 Data persists in the `postgres_data` Docker volume when running `docker compose down`.
 Running `docker compose down -v` also deletes the stored data.
-
-The schema is defined in a single V1 migration, including the required string
-`case_number` and `created_date`. Databases that ran an earlier version of these
-migrations must be recreated before starting the backend; changing an applied
-migration causes Flyway validation to fail. Recreating a database deletes its data.
-Run `./gradlew clean` after consolidating migrations to remove obsolete migration
-files from the build output.

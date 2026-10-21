@@ -51,4 +51,8 @@ public class CaseTask {
         this.dueDateTime = request.dueDateTime();
         this.createdDate = Instant.now().truncatedTo(ChronoUnit.MILLIS);
     }
+
+    public void updateStatus(String status) {
+        this.status = status;
+    }
 }
