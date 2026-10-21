@@ -9,6 +9,16 @@ can run the service in IntelliJ (or your IDE of choice) or however you normally 
 There is an example endpoint provided to retrieve an example of a case. You are free to add/remove fields as you
 wish.
 
+## Prerequisites
+
+- **JDK 21** installed, with `JAVA_HOME` pointing to it.
+- **Docker** installed and running, with **Docker Compose v2 or later** available
+  (`docker compose`)
+- Ports **4000** (backend) and **5432** (PostgreSQL) available locally.
+
+The Gradle wrapper is included, so a separate Gradle installation is not required.
+On Windows, use `gradlew.bat` instead of `./gradlew`.
+
 ## API documentation
 
 With the backend running, open [Swagger UI](http://localhost:4000/swagger-ui/index.html)
@@ -31,4 +41,3 @@ when running the backend, also export the same variables in its environment (or 
 
 Data persists in the `postgres_data` Docker volume when running `docker compose down`.
 Running `docker compose down -v` also deletes the stored data.
-
