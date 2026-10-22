@@ -12,7 +12,7 @@ import uk.gov.hmcts.reform.dev.models.CaseTask;
 import uk.gov.hmcts.reform.dev.models.CreateCaseRequest;
 import uk.gov.hmcts.reform.dev.repositories.CaseRepository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.mockito.Mockito.verify;
@@ -38,7 +38,7 @@ class GetCaseTest {
         String optionalDescription = description.isEmpty() ? null : description;
         CaseTask task = new CaseTask(new CreateCaseRequest(
             "ABC12345",
-            "Review evidence", optionalDescription, "Accepted", LocalDateTime.of(2026, 11, 1, 10, 30)
+            "Review evidence", optionalDescription, "Accepted", Instant.parse("2026-11-01T10:30:00Z")
         ));
         ReflectionTestUtils.setField(task, "id", 42L);
         when(caseRepository.findById(42L)).thenReturn(Optional.of(task));
@@ -50,7 +50,7 @@ class GetCaseTest {
             .andExpect(jsonPath("$.title").value("Review evidence"))
             .andExpect(jsonPath("$.description").value(optionalDescription))
             .andExpect(jsonPath("$.status").value("Accepted"))
-            .andExpect(jsonPath("$.dueDateTime").value("2026-11-01T10:30:00"));
+            .andExpect(jsonPath("$.dueDateTime").value("2026-11-01T10:30:00Z"));
 
         verify(caseRepository).findById(42L);
     }

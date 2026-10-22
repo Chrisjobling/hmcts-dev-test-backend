@@ -8,6 +8,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import uk.gov.hmcts.reform.dev.repositories.CaseRepository;
 
 import java.time.Instant;
@@ -32,6 +33,20 @@ class GetCaseFunctionalTest {
     @Autowired
     private CaseRepository caseRepository;
 
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @Test
+    void storesDatesAsTimestampsWithTimeZone() {
+        for (String column : List.of("due_date_time", "created_date")) {
+            String dataType = jdbcTemplate.queryForObject(
+                "SELECT data_type FROM information_schema.columns "
+                    + "WHERE table_name = 'case_tasks' AND column_name = ?",
+                String.class, column);
+            assertEquals("timestamp with time zone", dataType);
+        }
+    }
+
     @Test
     void retrievesPersistedTaskById() {
         Response created = given()
@@ -43,7 +58,7 @@ class GetCaseFunctionalTest {
                   "title": "Review evidence",
                   "description": "Read the witness statement",
                   "status": "Accepted",
-                  "dueDateTime": "2026-11-01T10:30:00"
+                  "dueDateTime": "2026-11-01T10:30:00+02:00"
                 }
                 """)
             .when()
@@ -68,7 +83,7 @@ class GetCaseFunctionalTest {
                 .body("description", equalTo("Read the witness statement"))
                 .body("status", equalTo("Accepted"))
                 .body("createdDate", equalTo(created.jsonPath().getString("createdDate")))
-                .body("dueDateTime", equalTo("2026-11-01T10:30:00"));
+                .body("dueDateTime", equalTo("2026-11-01T08:30:00Z"));
         } finally {
             caseRepository.deleteById(id);
         }
@@ -89,7 +104,7 @@ class GetCaseFunctionalTest {
                   "title": "Review evidence",
                   "description": "Read the witness statement",
                   "status": "Accepted",
-                  "dueDateTime": "2026-11-01T10:30:00"
+                  "dueDateTime": "2026-11-01T10:30:00Z"
                 }
                 """,
             """
@@ -97,7 +112,7 @@ class GetCaseFunctionalTest {
                   "caseNumber": "00054321",
                   "title": "Schedule hearing",
                   "status": "Pending",
-                  "dueDateTime": "2026-11-02T14:00:00"
+                  "dueDateTime": "2026-11-02T14:00:00Z"
                 }
                 """
         );
@@ -153,7 +168,7 @@ class GetCaseFunctionalTest {
         Response created = given().port(port).contentType(ContentType.JSON)
             .body("""
                 {"caseNumber":"MODIFY123","title":"Review evidence","description":"Read statement",
-                 "status":"Accepted","dueDateTime":"2026-11-01T10:30:00"}
+                 "status":"Accepted","dueDateTime":"2026-11-01T10:30:00Z"}
                 """)
             .when().post("/cases").then().statusCode(201).extract().response();
         long id = created.jsonPath().getLong("id");
@@ -207,7 +222,7 @@ class GetCaseFunctionalTest {
                 Response created = given().port(port).contentType(ContentType.JSON)
                     .body("""
                         {"caseNumber":"FILTER123","title":"Filter test","status":"%s",
-                         "dueDateTime":"2026-11-01T10:30:00"}
+                         "dueDateTime":"2026-11-01T10:30:00Z"}
                         """.formatted(taskStatus))
                     .when().post("/cases").then().statusCode(201).extract().response();
                 ids.add(created.jsonPath().getLong("id"));

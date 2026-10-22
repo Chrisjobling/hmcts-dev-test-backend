@@ -4,6 +4,6 @@ CREATE TABLE case_tasks (
     title VARCHAR(255) NOT NULL,
     description TEXT,
     status VARCHAR(255) NOT NULL,
-    due_date_time TIMESTAMP NOT NULL,
+    due_date_time TIMESTAMP WITH TIME ZONE NOT NULL,
     created_date TIMESTAMP WITH TIME ZONE NOT NULL
 );

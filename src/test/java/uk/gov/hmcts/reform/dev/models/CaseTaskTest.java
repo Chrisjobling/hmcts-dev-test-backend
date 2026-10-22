@@ -3,7 +3,6 @@ package uk.gov.hmcts.reform.dev.models;
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -13,7 +12,7 @@ class CaseTaskTest {
 
     @Test
     void copiesFieldsFromCreationRequest() {
-        LocalDateTime dueDateTime = LocalDateTime.of(2026, 11, 1, 10, 30);
+        Instant dueDateTime = Instant.parse("2026-11-01T10:30:00Z");
         CreateCaseRequest request = new CreateCaseRequest(
             "ABC12345",
             "Review evidence",
@@ -40,7 +39,7 @@ class CaseTaskTest {
     void updatingStatusRepeatedlyPreservesOtherFields() {
         CreateCaseRequest request = new CreateCaseRequest(
             "ABC12345", "Review evidence", "Read statement", "Accepted",
-            LocalDateTime.of(2026, 11, 1, 10, 30)
+            Instant.parse("2026-11-01T10:30:00Z")
         );
         CaseTask task = new CaseTask(request);
         final Instant createdDate = task.getCreatedDate();
@@ -64,7 +63,7 @@ class CaseTaskTest {
             "Review evidence",
             null,
             "Accepted",
-            LocalDateTime.of(2026, 11, 1, 10, 30)
+            Instant.parse("2026-11-01T10:30:00Z")
         );
 
         CaseTask task = new CaseTask(request);

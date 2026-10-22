@@ -29,7 +29,7 @@ import uk.gov.hmcts.reform.dev.models.ExampleCase;
 import uk.gov.hmcts.reform.dev.models.UpdateStatusRequest;
 import uk.gov.hmcts.reform.dev.repositories.CaseRepository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import static org.springframework.http.ResponseEntity.ok;
 
@@ -113,7 +113,7 @@ public class CaseController {
     @GetMapping(value = "/get-example-case", produces = "application/json")
     public ResponseEntity<ExampleCase> getExampleCase() {
         return ok(new ExampleCase(1, "ABC12345", "Case Title",
-                                  "Case Description", "Case Status", LocalDateTime.now()
+                                  "Case Description", "Case Status", Instant.now()
         ));
     }
 }

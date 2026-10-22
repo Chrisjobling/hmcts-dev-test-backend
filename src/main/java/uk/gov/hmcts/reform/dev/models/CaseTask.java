@@ -12,7 +12,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
 @Entity
@@ -37,7 +36,7 @@ public class CaseTask {
     private String status;
 
     @Column(nullable = false)
-    private LocalDateTime dueDateTime;
+    private Instant dueDateTime;
 
     @Schema(description = "Server-generated creation timestamp in UTC", accessMode = Schema.AccessMode.READ_ONLY)
     @Column(nullable = false, updatable = false)

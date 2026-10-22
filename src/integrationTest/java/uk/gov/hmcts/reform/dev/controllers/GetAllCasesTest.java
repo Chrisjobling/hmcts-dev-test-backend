@@ -17,7 +17,7 @@ import uk.gov.hmcts.reform.dev.models.CaseTask;
 import uk.gov.hmcts.reform.dev.models.CreateCaseRequest;
 import uk.gov.hmcts.reform.dev.repositories.CaseRepository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 import static org.mockito.Mockito.verify;
@@ -76,11 +76,11 @@ class GetAllCasesTest {
         CaseTask first = new CaseTask(new CreateCaseRequest(
             "ABC12345",
             "Review evidence", "Read the witness statement", "Accepted",
-            LocalDateTime.of(2026, 11, 1, 10, 30)
+            Instant.parse("2026-11-01T10:30:00Z")
         ));
         CaseTask second = new CaseTask(new CreateCaseRequest(
             "00054321",
-            "Schedule hearing", null, "Pending", LocalDateTime.of(2026, 11, 2, 14, 0)
+            "Schedule hearing", null, "Pending", Instant.parse("2026-11-02T14:00:00Z")
         ));
         ReflectionTestUtils.setField(first, "id", 1L);
         ReflectionTestUtils.setField(second, "id", 2L);
@@ -100,13 +100,13 @@ class GetAllCasesTest {
             .andExpect(jsonPath("$.content[0].title").value("Review evidence"))
             .andExpect(jsonPath("$.content[0].description").value("Read the witness statement"))
             .andExpect(jsonPath("$.content[0].status").value("Accepted"))
-            .andExpect(jsonPath("$.content[0].dueDateTime").value("2026-11-01T10:30:00"))
+            .andExpect(jsonPath("$.content[0].dueDateTime").value("2026-11-01T10:30:00Z"))
             .andExpect(jsonPath("$.content[1].id").value(2))
             .andExpect(jsonPath("$.content[1].caseNumber").value("00054321"))
             .andExpect(jsonPath("$.content[1].title").value("Schedule hearing"))
             .andExpect(jsonPath("$.content[1].description").doesNotExist())
             .andExpect(jsonPath("$.content[1].status").value("Pending"))
-            .andExpect(jsonPath("$.content[1].dueDateTime").value("2026-11-02T14:00:00"));
+            .andExpect(jsonPath("$.content[1].dueDateTime").value("2026-11-02T14:00:00Z"));
 
         verify(caseRepository).findAll(defaultPage());
     }
@@ -125,7 +125,7 @@ class GetAllCasesTest {
     @ValueSource(strings = {"open", "closed", "in-progress", "OPEN", "Closed", "In-Progress"})
     void retrievesTasksMatchingStatus(String filter) throws Exception {
         CaseTask task = new CaseTask(new CreateCaseRequest(
-            "ABC123", "Review evidence", null, filter, LocalDateTime.of(2026, 11, 1, 10, 30)
+            "ABC123", "Review evidence", null, filter, Instant.parse("2026-11-01T10:30:00Z")
         ));
         when(caseRepository.findByStatusIgnoreCase(filter, defaultPage()))
             .thenReturn(new PageImpl<>(List.of(task), defaultPage(), 1));

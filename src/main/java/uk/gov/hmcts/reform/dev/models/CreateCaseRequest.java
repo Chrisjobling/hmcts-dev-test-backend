@@ -6,13 +6,13 @@ import jakarta.validation.constraints.Size;
 import tools.jackson.databind.annotation.JsonDeserialize;
 import uk.gov.hmcts.reform.dev.models.serialization.StrictStringDeserializer;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record CreateCaseRequest(
     @NotBlank @Size(max = 255) @JsonDeserialize(using = StrictStringDeserializer.class) String caseNumber,
     @NotBlank @Size(max = 255) String title,
     String description,
     @NotBlank @Size(max = 255) String status,
-    @NotNull LocalDateTime dueDateTime
+    @NotNull Instant dueDateTime
 ) {
 }

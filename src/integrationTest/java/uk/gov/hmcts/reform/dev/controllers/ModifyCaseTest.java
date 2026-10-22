@@ -12,7 +12,7 @@ import uk.gov.hmcts.reform.dev.models.CaseTask;
 import uk.gov.hmcts.reform.dev.models.CreateCaseRequest;
 import uk.gov.hmcts.reform.dev.repositories.CaseRepository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -50,7 +50,7 @@ class ModifyCaseTest {
             .andExpect(jsonPath("$.caseNumber").value("ABC123"))
             .andExpect(jsonPath("$.title").value("Review evidence"))
             .andExpect(jsonPath("$.description").value("Read statement"))
-            .andExpect(jsonPath("$.dueDateTime").value("2026-11-01T10:30:00"))
+            .andExpect(jsonPath("$.dueDateTime").value("2026-11-01T10:30:00Z"))
             .andExpect(jsonPath("$.createdDate").value(createdDate));
 
         verify(caseRepository).save(task);
@@ -118,7 +118,7 @@ class ModifyCaseTest {
 
     private CaseTask task() {
         return new CaseTask(new CreateCaseRequest(
-            "ABC123", "Review evidence", "Read statement", "Accepted", LocalDateTime.of(2026, 11, 1, 10, 30)
+            "ABC123", "Review evidence", "Read statement", "Accepted", Instant.parse("2026-11-01T10:30:00Z")
         ));
     }
 }
