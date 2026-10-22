@@ -18,6 +18,7 @@ import java.util.Map;
 
 import static io.restassured.RestAssured.given;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.hamcrest.Matchers.equalTo;
@@ -146,7 +147,8 @@ class GetCaseFunctionalTest {
                        "The response should contain both created tasks with all their saved fields");
 
             for (int index = 0; index < createdTasks.size(); index++) {
-                Response page = given().port(port).queryParam("page", initialCount + index).queryParam("size", 1)
+                Response page = given().port(port).queryParam("page",
+                                                              initialCount + index).queryParam("size", 1)
                     .when().get("/cases").then().statusCode(200)
                     .body("page", equalTo(initialCount + index))
                     .body("size", equalTo(1))
@@ -240,6 +242,39 @@ class GetCaseFunctionalTest {
             }
         } finally {
             caseRepository.deleteAllById(ids);
+        }
+    }
+
+    @Test
+    void updatesFilteredResultsAfterStatusChange() {
+        Response created = given().port(port).contentType(ContentType.JSON)
+            .body("""
+                {"caseNumber":"FILTER456","title":"Status transition","status":"Open",
+                 "dueDateTime":"2026-11-01T10:30:00Z"}
+                """)
+            .when().post("/cases").then().statusCode(201).extract().response();
+        long id = created.jsonPath().getLong("id");
+
+        try {
+            List<Long> openIds = given().port(port).queryParam("status", "open").queryParam("size", 50)
+                .when().get("/cases").then().statusCode(200)
+                .extract().jsonPath().getList("content.id", Long.class);
+            assertTrue(openIds.contains(id));
+
+            given().port(port).contentType(ContentType.JSON).body("{\"status\":\"Closed\"}")
+                .when().patch("/cases/{id}/status", id).then().statusCode(200);
+
+            openIds = given().port(port).queryParam("status", "open").queryParam("size", 50)
+                .when().get("/cases").then().statusCode(200)
+                .extract().jsonPath().getList("content.id", Long.class);
+            List<Long> closedIds = given().port(port).queryParam("status", "closed").queryParam("size", 50)
+                .when().get("/cases").then().statusCode(200)
+                .extract().jsonPath().getList("content.id", Long.class);
+
+            assertFalse(openIds.contains(id));
+            assertTrue(closedIds.contains(id));
+        } finally {
+            caseRepository.deleteById(id);
         }
     }
 

@@ -80,10 +80,13 @@ class CreateCaseTest {
     @ValueSource(strings = {
         "{}",
         "{\"caseNumber\":\"1\",\"title\":\" \",\"status\":\"Accepted\",\"dueDateTime\":\"2026-11-01T10:30:00Z\"}",
-        "{\"caseNumber\":\"1\",\"title\":\"Review evidence\",\"status\":\" \",\"dueDateTime\":\"2026-11-01T10:30:00Z\"}",
+        "{\"caseNumber\":\"1\",\"title\":\"Review evidence\",\"status\":\" \","
+            + "\"dueDateTime\":\"2026-11-01T10:30:00Z\"}",
         "{\"caseNumber\":\"1\",\"title\":\"Review evidence\",\"status\":\"Accepted\"}",
-        "{\"caseNumber\":\"1\",\"title\":\"Review evidence\",\"status\":\"Accepted\",\"dueDateTime\":\"not-a-date\"}",
-        "{\"caseNumber\":\"1\",\"title\":\"Review evidence\",\"status\":\"Accepted\",\"dueDateTime\":\"2026-11-01T10:30:00\"}"
+        "{\"caseNumber\":\"1\",\"title\":\"Review evidence\",\"status\":\"Accepted\","
+            + "\"dueDateTime\":\"not-a-date\"}",
+        "{\"caseNumber\":\"1\",\"title\":\"Review evidence\",\"status\":\"Accepted\","
+            + "\"dueDateTime\":\"2026-11-01T10:30:00\"}"
     })
     void rejectsInvalidRequests(String body) throws Exception {
         mockMvc.perform(post("/cases").contentType(MediaType.APPLICATION_JSON).content(body))

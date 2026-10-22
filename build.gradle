@@ -76,6 +76,7 @@ tasks.withType(Test).configureEach {
   failFast = true
 
   testLogging {
+    events 'passed', 'skipped', 'failed'
     exceptionFormat = 'full'
   }
 }

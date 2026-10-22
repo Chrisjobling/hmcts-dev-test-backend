@@ -27,6 +27,24 @@ Start the database before running the backend:
 docker compose up -d --wait
 ./gradlew bootRun
 ```
+
+## Running tests
+
+Run the unit tests without starting PostgreSQL:
+
+```sh
+./gradlew cleanTest test
+```
+
+For integration and functional tests, start PostgreSQL first. The functional and smoke
+tests call the backend on port 4000, so set `TEST_URL` to match:
+
+```sh
+docker compose up -d --wait
+./gradlew integration
+TEST_URL=http://localhost:4000 ./gradlew functional smoke
+```
+
 ## API documentation
 
 With the backend running, open [Swagger UI](http://localhost:4000/swagger-ui/index.html)
